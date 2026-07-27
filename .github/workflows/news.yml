@@ -1,0 +1,40 @@
+name: Portfolio news bot
+
+on:
+  schedule:
+    # Запуск каждые 10 минут. Синтаксис cron: минута час день месяц день_недели.
+    # GitHub может слегка задерживать запуск в моменты высокой нагрузки — это нормально.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}   # позволяет запустить вручную кнопкой "Run workflow" на вкладке Actions
+
+permissions:
+  contents: write   # нужно, чтобы бот мог сохранять sent_news.json обратно в репозиторий
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run bot
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python portfolio_news_bot.py
+
+      - name: Save sent-news history back to the repository
+        run: |
+          git config user.name "portfolio-news-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add sent_news.json
+          git diff --quiet --cached || git commit -m "Update sent news history"
+          git push
